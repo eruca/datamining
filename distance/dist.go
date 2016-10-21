@@ -5,77 +5,6 @@ import (
 	"sort"
 )
 
-var (
-	users = map[string]map[string]float64{
-		"Angelica": {
-			"Blue Traveler":    3.5,
-			"Broken Bells":     2.0,
-			"Norah Jones":      4.5,
-			"Phoenix":          5.0,
-			"Slightly Stoopid": 1.5,
-			"The Strokes":      2.5,
-			"Vampire Weekend":  2.0,
-		},
-		"Bill": {
-			"Blue Traveler":    2.0,
-			"Broken Bells":     3.5,
-			"Deadmau5":         4.0,
-			"Phoenix":          2.0,
-			"Slightly Stoopid": 3.5,
-			"Vampire Weekend":  3.0,
-		},
-		"Chan": {
-			"Blue Traveler":    5.0,
-			"Broken Bells":     1.0,
-			"Deadmau5":         1.0,
-			"Norah Jones":      3.0,
-			"Phoenix":          5.0,
-			"Slightly Stoopid": 1.0,
-		},
-		"Dan": {
-			"Blue Traveler":    3.0,
-			"Broken Bells":     4.0,
-			"Deadmau5":         4.5,
-			"Norah Jones":      4.5,
-			"Phoenix":          3.0,
-			"Slightly Stoopid": 4.5,
-			"The Strokes":      4.0,
-			"Vampire Weekend":  2.0,
-		},
-		"Hailey": {
-			"Broken Bells":    4.0,
-			"Deadmau5":        1.0,
-			"Norah Jones":     4.0,
-			"The Strokes":     4.0,
-			"Vampire Weekend": 1.0,
-		},
-		"Jordyn": {
-			"Broken Bells":     4.5,
-			"Deadmau5":         4.0,
-			"Norah Jones":      5.0,
-			"Phoenix":          5.0,
-			"Slightly Stoopid": 4.5,
-			"The Strokes":      4.0,
-			"Vampire Weekend":  4.0,
-		},
-		"Sam": {
-			"Blue Traveler":    5.0,
-			"Broken Bells":     2.0,
-			"Norah Jones":      3.0,
-			"Phoenix":          5.0,
-			"Slightly Stoopid": 4.0,
-			"The Strokes":      5.0,
-		},
-		"Veronica": {
-			"Blue Traveler":    3.0,
-			"Norah Jones":      5.0,
-			"Phoenix":          4.0,
-			"Slightly Stoopid": 2.5,
-			"The Strokes":      3.0,
-		},
-	}
-)
-
 // Computes the Manhattan distance,
 // Both rating1 and rating2 are dictionaryies of the form
 func manhattan(rating1, rating2 map[string]float64) (distance float64) {
@@ -99,6 +28,9 @@ func (by byDist) Len() int {
 }
 
 func (by byDist) Less(i, j int) bool {
+	if by[i].distance == by[j].distance {
+		return by[i].name < by[j].name
+	}
 	return by[i].distance < by[j].distance
 }
 
@@ -121,4 +53,35 @@ func computeNearestNeighbor(username string, users map[string]map[string]float64
 	}
 	sort.Sort(result)
 	return result
+}
+
+func minkowski(rating1, rating2 map[string]float64, r float64) (distance float64) {
+	commonRatings := false
+	for k, v := range rating1 {
+		if v2, ok := rating2[k]; ok {
+			distance += math.Pow(math.Abs(v-v2), r)
+			commonRatings = true
+		}
+	}
+
+	if commonRatings {
+		return math.Pow(distance, 1/r)
+	}
+
+	return 0
+}
+
+// first find nearest neighbor
+func Recommend(username string, users map[string]map[string]float64) (recommedation []nameWithDist) {
+	nearest := computeNearestNeighbor(username, users)[0].name
+	neighborRatings := users[nearest]
+	userRatings := users[username]
+
+	for name, dist := range neighborRatings {
+		if _, ok := userRatings[name]; !ok {
+			recommedation = append(recommedation, nameWithDist{name: name, distance: dist})
+		}
+	}
+	sort.Stable(sort.Reverse(byDist(recommedation)))
+	return
 }
